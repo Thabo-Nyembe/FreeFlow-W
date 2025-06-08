@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
@@ -18,7 +19,10 @@ import {
   Clock,
   CheckCircle,
   ArrowRight,
-  Search
+  Search,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 
 const faqs = [
@@ -63,7 +67,8 @@ const supportChannels = [
     description: "Get detailed help via email",
     contact: "support@freelanceflowzee.com",
     response: "Within 24 hours",
-    action: "Send Email"
+    action: "Send Email",
+    href: "mailto:support@freelanceflowzee.com"
   },
   {
     icon: MessageSquare,
@@ -71,7 +76,8 @@ const supportChannels = [
     description: "Chat with our support team",
     contact: "Available in app",
     response: "Instant response",
-    action: "Start Chat"
+    action: "Start Chat",
+    href: "#chat"
   },
   {
     icon: Phone,
@@ -79,7 +85,8 @@ const supportChannels = [
     description: "Speak directly with our team",
     contact: "+1 (555) 123-4567",
     response: "Business hours",
-    action: "Call Now"
+    action: "Call Now",
+    href: "tel:+15551234567"
   }
 ]
 
@@ -105,9 +112,79 @@ const resources = [
 ]
 
 export default function SupportPage() {
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showLiveChat, setShowLiveChat] = useState(false)
+  const [chatMessages, setChatMessages] = useState([
+    { sender: 'Support', message: 'Hi! How can I help you today?', time: '2:34 PM' },
+    { sender: 'You', message: 'I need help with payment setup', time: '2:35 PM' },
+    { sender: 'Support', message: 'I\'d be happy to help! Let me guide you through the payment setup process.', time: '2:35 PM' }
+  ])
+  const [newMessage, setNewMessage] = useState('')
+  const [supportStatus] = useState({
+    online: true,
+    responseTime: '< 2 minutes',
+    queuePosition: 0,
+    agentName: 'Sarah Johnson'
+  })
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
+    
+    // Simulate form submission
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
     alert('Thank you for contacting us! We\'ll get back to you within 24 hours.')
+    setFormData({ name: '', email: '', subject: '', message: '' })
+    setIsSubmitting(false)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.id]: e.target.value
+    }))
+  }
+
+  const filteredFaqs = faqs.filter(faq =>
+    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const handleChannelClick = (channel: typeof supportChannels[0]) => {
+    if (channel.title === "Live Chat") {
+      setShowLiveChat(true)
+    } else {
+      window.open(channel.href, '_blank')
+    }
+  }
+
+  const sendMessage = () => {
+    if (newMessage.trim()) {
+      setChatMessages([...chatMessages, {
+        sender: 'You',
+        message: newMessage,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }])
+      setNewMessage('')
+      
+      // Simulate support response
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, {
+          sender: 'Support',
+          message: 'Thanks for your message! Let me help you with that.',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }])
+      }, 1500)
+    }
   }
 
   return (
@@ -126,15 +203,31 @@ export default function SupportPage() {
               Find answers to common questions, browse our documentation, or contact our support team.
             </p>
             
-            {/* Search Bar */}
+            {/* Interactive Search Bar */}
             <div className="max-w-2xl mx-auto relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
                 type="text"
                 placeholder="Search for help articles, guides, or features..."
                 className="pl-12 pr-4 py-3 text-lg bg-white border-gray-300 focus:border-indigo-500 rounded-lg shadow-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 suppressHydrationWarning
               />
+              {searchQuery && (
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-2 z-10">
+                  <div className="p-4">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Found {filteredFaqs.length} result{filteredFaqs.length !== 1 ? 's' : ''}
+                    </p>
+                    {filteredFaqs.slice(0, 3).map((faq, index) => (
+                      <div key={index} className="py-2 border-b border-gray-100 last:border-b-0">
+                        <p className="text-sm font-medium text-gray-900">{faq.question}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -166,8 +259,12 @@ export default function SupportPage() {
                         <Clock className="w-4 h-4" />
                         <span>{channel.response}</span>
                       </div>
-                      <Button className="w-full bg-indigo-600 hover:bg-indigo-700">
+                      <Button 
+                        className="w-full bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => handleChannelClick(channel)}
+                      >
                         {channel.action}
+                        <ExternalLink className="w-4 h-4 ml-2" />
                       </Button>
                     </div>
                   </CardContent>
@@ -177,7 +274,7 @@ export default function SupportPage() {
           </div>
         </section>
 
-        {/* FAQ Section */}
+        {/* Interactive FAQ Section */}
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -189,18 +286,30 @@ export default function SupportPage() {
               </p>
             </div>
 
-            <div className="max-w-4xl mx-auto space-y-6">
-              {faqs.map((faq, index) => (
-                <Card key={index} className="border-l-4 border-l-indigo-500">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-start">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                      {faq.question}
+            <div className="max-w-4xl mx-auto space-y-4">
+              {filteredFaqs.map((faq, index) => (
+                <Card key={index} className="border-l-4 border-l-indigo-500 hover:shadow-md transition-shadow">
+                  <CardHeader 
+                    className="cursor-pointer"
+                    onClick={() => setExpandedFaq(expandedFaq === index ? null : index)}
+                  >
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <div className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                        {faq.question}
+                      </div>
+                      {expandedFaq === index ? (
+                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      )}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 ml-8">{faq.answer}</p>
-                  </CardContent>
+                  {expandedFaq === index && (
+                    <CardContent>
+                      <p className="text-gray-600 ml-8">{faq.answer}</p>
+                    </CardContent>
+                  )}
                 </Card>
               ))}
             </div>
@@ -243,7 +352,7 @@ export default function SupportPage() {
           </div>
         </section>
 
-        {/* Contact Form */}
+        {/* Interactive Contact Form */}
         <section className="py-16 bg-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -272,6 +381,8 @@ export default function SupportPage() {
                       <Input
                         id="name"
                         type="text"
+                        value={formData.name}
+                        onChange={handleInputChange}
                         required
                         suppressHydrationWarning
                       />
@@ -283,6 +394,8 @@ export default function SupportPage() {
                       <Input
                         id="email"
                         type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
                         required
                         suppressHydrationWarning
                       />
@@ -296,6 +409,8 @@ export default function SupportPage() {
                     <Input
                       id="subject"
                       type="text"
+                      value={formData.subject}
+                      onChange={handleInputChange}
                       required
                       suppressHydrationWarning
                     />
@@ -308,6 +423,8 @@ export default function SupportPage() {
                     <Textarea
                       id="message"
                       rows={6}
+                      value={formData.message}
+                      onChange={handleInputChange}
                       required
                       className="resize-none"
                       suppressHydrationWarning
@@ -317,10 +434,105 @@ export default function SupportPage() {
                   <Button 
                     type="submit"
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3"
+                    disabled={isSubmitting}
                   >
-                    Send Message
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Live Chat Interface */}
+        {showLiveChat && (
+          <div className="fixed bottom-4 right-4 w-96 h-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50">
+            <div className="flex items-center justify-between p-4 bg-indigo-600 text-white rounded-t-lg">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                <span className="font-medium">Live Chat - {supportStatus.agentName}</span>
+              </div>
+              <button 
+                onClick={() => setShowLiveChat(false)}
+                className="text-white hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="h-64 overflow-y-auto p-4 space-y-3">
+              {chatMessages.map((msg, index) => (
+                <div key={index} className={`flex ${msg.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-xs p-3 rounded-lg ${
+                    msg.sender === 'You' 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-gray-100 text-gray-900'
+                  }`}>
+                    <p className="text-sm">{msg.message}</p>
+                    <p className="text-xs opacity-75 mt-1">{msg.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex space-x-2">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  className="flex-1"
+                  suppressHydrationWarning
+                />
+                <Button onClick={sendMessage} size="sm">
+                  Send
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Support Status Dashboard */}
+        <section className="py-8 bg-indigo-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Card className="bg-white shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <div className={`w-3 h-3 rounded-full mr-2 ${supportStatus.online ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  Support Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center">
+                    <div className={`text-2xl font-bold ${supportStatus.online ? 'text-green-600' : 'text-red-600'}`}>
+                      {supportStatus.online ? 'Online' : 'Offline'}
+                    </div>
+                    <div className="text-sm text-gray-600">Support Team</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{supportStatus.responseTime}</div>
+                    <div className="text-sm text-gray-600">Avg Response</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{supportStatus.queuePosition}</div>
+                    <div className="text-sm text-gray-600">Queue Position</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">24/7</div>
+                    <div className="text-sm text-gray-600">Availability</div>
+                  </div>
+                </div>
+                <div className="mt-6 text-center">
+                  <Button 
+                    onClick={() => setShowLiveChat(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Start Live Chat
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
